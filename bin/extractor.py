@@ -135,7 +135,7 @@ def main():
 
 	if zipsource == "" or resultdest == "" or os.path.exists(resultdest):
 		usage()
-		sys.exit()
+		sys.exit(1)
 
 	extractResources(zipsource)
 	moveFiles(resultdest)
