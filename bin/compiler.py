@@ -52,6 +52,8 @@ def main():
 			usage()
 			sys.exit()
 
+	if directory[-1] != os.sep:
+		directory = directory + os.sep
 	if directory == "" or not os.path.exists(directory):
 		usage()
 		sys.exit()
@@ -60,18 +62,26 @@ def main():
 
 def compileFiles(directory):
 	# first level is groups
-	groupList = os.listdir(directory)
-	okStudents = []
-	notOkStudents = []
+	groupList = sorted(os.listdir(directory))
+	okStudents = {}
+	notOkStudents = {}
 	for group in groupList:
+		okStudents[group] = []
+		notOkStudents[group] = []
 		students = os.listdir(directory + group)
 		for student in students:
 			if compileJava(directory + group + os.sep + student):
-				okStudents.append(student)
+				okStudents[group].append(student)
 			else:
-				notOkStudents.append(student)
-	print("Students with compiling files: {}".format(okStudents))
-	print("Students with compilation errors: {}".format(notOkStudents))
+				notOkStudents[group].append(student)
+	print("Students with compiling files:\n===")
+	for group in groupList:
+		print ("{}:{}".format(group, okStudents[group]))
+	print("Students with errors in compilation:\n===")
+	for group in groupList:
+		print ("{}:{}".format(group, notOkStudents[group]))		
+	
+#	print("Students with compilation errors: {}".format(notOkStudents))
 
 def compileJava(directory):
 	files = os.listdir(directory)
