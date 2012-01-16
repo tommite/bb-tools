@@ -56,13 +56,20 @@ def moveFiles(resultdest):
 	"""
 	moves all files to the corresponding students' folders
 	"""
+	unknownIndex = 1
 	if not os.path.exists(resultdest):
 		os.makedirs(resultdest)
 	dirList = os.listdir(tempFolder)
 	p = re.compile('\d{6}[a-z]{2}', re.IGNORECASE)
 	path = ""
 	for fname in dirList:
-		path = resultdest + "/" + p.findall(fname)[0]
+		uname = p.findall(fname)
+		if len(uname) == 0:
+			uname = 'UNKNOWN_' + str(unknownIndex)
+			unknownIndex = unknownIndex + 1
+		else:
+			uname = uname[0]
+		path = resultdest + "/" + uname
 		if not os.path.exists(path):
 			os.makedirs(path)
 
@@ -81,7 +88,10 @@ def renameFiles(path, filesList):
 		fnew = fnew[(i + 1):]
 		f = path + "/" + f
 		fnew = path + "/" + fnew
-		shutil.move(f, fnew)
+		if fnew.endswith("zip"):
+			shutil.move(f, fnew)
+		elif f.endswith("zip"):
+			fnew = f
 		if fnew.endswith("zip"):
 			extractResources(fnew, path)
 
