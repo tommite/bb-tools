@@ -161,6 +161,7 @@ def main():
 	csvReader = csv.reader(open(groupFile), delimiter = ',')
 	groupDict = {}
 	userDict = {}
+	
 	for line in csvReader:
 		groupDict[line[0]] = line[1]
   		if not line[1] in userDict.keys():
@@ -176,18 +177,25 @@ def main():
 	groupFolders(resultdest, groupDict)
 	shutil.rmtree(tempFolder)
 	print "==="
-	print "Submissions with zip (files extracted):",
-	printUsersWithGroups(zipInfo['zip'], groupDict)
+	print "Submissions with zip (files extracted, total {}):".format(len(zipInfo['zip'])),
+	for ug in sorted(getUsersWithGroups(zipInfo['zip'], groupDict)):
+		print ug,
 	print "\n---"
-	print "Submissions without zip:",
-	printUsersWithGroups(zipInfo['nozip'], groupDict)
+	print "Submissions without zip (total {}):".format(len(zipInfo['nozip'])),
+	for ug in sorted(getUsersWithGroups(zipInfo['nozip'], groupDict)):
+		print ug,
 	print "\n==="
 
-def printUsersWithGroups(users, groupDict):
-	for user in sorted(users):
-		group = "UNKNOWN"		
-		if user in groupDict.keys():
+def getUsersWithGroups(users, groupDict):
+	groups = set(groupDict.values())
+	groups.add("UNKNOWN")
+	res = []
+	for user in users:
+		group = "UNKNOWN"
+		if groupDict.has_key(user):
 			group = groupDict[user]
-		print "{}/{}".format(group,user), 
+		res.append(group+"/"+user)
+	return res
+
 
 if __name__ == '__main__': main()

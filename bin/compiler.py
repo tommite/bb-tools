@@ -90,7 +90,7 @@ def compileJava(directory):
 	for f in [f for f in files if p.search(f)]:
 		fullfile = directory + os.sep + f
 		cmd = "javac -source 1.6 -target 1.6 -d " + directory + " -sourcepath " + directory + " " + fullfile
-		fnull=open('/dev/null', 'w')
+		fnull=open(os.path.devnull, 'w')
 		ret = subprocess.call(cmd, stdout=fnull, shell=True)
 		if ret != 0:
 			retval = False
