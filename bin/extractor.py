@@ -68,7 +68,7 @@ def moveFiles(resultdest):
 			uname = 'UNKNOWN_' + str(unknownIndex)
 			unknownIndex = unknownIndex + 1
 		else:
-			uname = uname[0]
+			uname = uname[0][:6]
 		path = resultdest + "/" + uname
 		if not os.path.exists(path):
 			os.makedirs(path)
@@ -81,6 +81,9 @@ def moveFiles(resultdest):
 def renameFiles(path, filesList):
 	i = 0
 	fnew = ""
+
+	zipfound = False
+	
 	for f in filesList:
 		i = f.find('attempt')
 		fnew = f[i:]
@@ -94,27 +97,31 @@ def renameFiles(path, filesList):
 			fnew = f
 		if fnew.endswith("zip"):
 			extractResources(fnew, path)
+			zipfound = True
+	return zipfound
 
 
 def filterStudentFiles(resultdest):
 	dirList = os.listdir(resultdest)
+	withZip = []
+	withoutZip = []
 	for fname in dirList:
 		filesList = os.listdir(resultdest + "/" + fname)
-		renameFiles(resultdest + "/" + fname, filesList)
+		if renameFiles(resultdest + "/" + fname, filesList):
+			withZip.append(fname)
+		else:
+			withoutZip.append(fname)
+	return {'zip':withZip, 'nozip':withoutZip}
 
 
-def groupFolders(resultdest, groupFile):
-	csvReader = csv.reader(open(groupFile), delimiter = ',')
-	groupDict = {}
-	for line in csvReader:
-		groupDict[line[0]] = line[1]
+def groupFolders(resultdest, groupDict):
 
 	dirList = os.listdir(resultdest)
 	g = ""
 	for fname in dirList:
 		g = "UNKNOWN"
-		if groupDict.has_key(fname[:6]):
-			g = groupDict[fname[:6]]
+		if groupDict.has_key(fname):
+			g = groupDict[fname]
 		groupPath = resultdest + "/" + g
 		if not os.path.exists(groupPath): os.mkdir(groupPath)
 		shutil.move(resultdest + "/" + fname, groupPath + "/" + fname)
@@ -143,14 +150,44 @@ def main():
 			usage()
 			sys.exit()
 
-	if zipsource == "" or resultdest == "" or os.path.exists(resultdest):
+	if zipsource == "" or resultdest == "" or resultdest == "":
 		usage()
 		sys.exit(1)
 
+	if os.path.exists(resultdest):
+		print "Error: target directory {} exists (remove and re-try)".format(resultdest)
+		sys.exit(1)
+
+	csvReader = csv.reader(open(groupFile), delimiter = ',')
+	groupDict = {}
+	userDict = {}
+	for line in csvReader:
+		groupDict[line[0]] = line[1]
+  		if not line[1] in userDict.keys():
+			userDict[line[1]] = [line[0]]
+		else:
+			arr = userDict[line[1]]
+			arr.append(line[0])
+			userDict[line[1]] = arr
+
 	extractResources(zipsource)
 	moveFiles(resultdest)
-	filterStudentFiles(resultdest)
-	groupFolders(resultdest, groupFile)
+	zipInfo = filterStudentFiles(resultdest)
+	groupFolders(resultdest, groupDict)
 	shutil.rmtree(tempFolder)
+	print "==="
+	print "Submissions with zip (files extracted):",
+	printUsersWithGroups(zipInfo['zip'], groupDict)
+	print "\n---"
+	print "Submissions without zip:",
+	printUsersWithGroups(zipInfo['nozip'], groupDict)
+	print "\n==="
+
+def printUsersWithGroups(users, groupDict):
+	for user in sorted(users):
+		group = "UNKNOWN"		
+		if user in groupDict.keys():
+			group = groupDict[user]
+		print "{}/{}".format(group,user), 
 
 if __name__ == '__main__': main()
