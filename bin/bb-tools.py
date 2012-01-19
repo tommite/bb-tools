@@ -21,6 +21,7 @@
 
 import csv
 import os
+import os.path
 import re
 import shutil
 import sys
@@ -120,6 +121,7 @@ def main():
 
 	dirList = os.listdir(TEMP_FOLDER) ## list files in the temp folder
 
+	print "ID\tGroup\tStatus"
 	for fname in os.listdir(TEMP_FOLDER):
 		processSubmission(fname, resultdest, gDicts)
 
@@ -152,10 +154,15 @@ def processSubmission(srcFile, destDir, gDicts):
 	f = TEMP_FOLDER + os.sep + srcFile
 	fnew = path + os.sep + srcFile
 	shutil.move(f, fnew)
-	if (fnew.endswith('zip')):
-		extractResources(fnew, srcD)
-		compileFiles(srcD, dstD)
-
+	if not fnew.endswith('txt'):
+		status = "OK"
+		if fnew.endswith('zip'):
+			extractResources(fnew, srcD)
+			if not compileFiles(srcD, dstD):
+				status = "Compilation error"
+		else:
+			status = "Not zip: " +  os.path.splitext(fnew)[1]
+		print "{}\t{}\t{}".format(studId,group,status)
 	renameFile(path, srcFile)
 
 def compileFiles(srcD, dstD):
