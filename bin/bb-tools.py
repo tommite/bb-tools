@@ -160,10 +160,43 @@ def processSubmission(srcFile, destDir, gDicts):
 			extractResources(fnew, srcD)
 			if not compileFiles(srcD, dstD):
 				status = "Compilation error"
+			else:
+				mainClass = findMainClass(srcD)
+				if len(mainClass) == 0:
+					status = "No main()"
+				else:
+					if not runMain(dstD, mainClass):
+						status = "Execution error"
 		else:
 			status = "Not zip: " +  os.path.splitext(fnew)[1]
 		print "{}\t{}\t{}".format(studId,group,status)
 	renameFile(path, srcFile)
+
+def runMain(classpath, mainclass):
+	cmd = "java -classpath " + classpath + " " + mainclass
+	fnull=open(os.path.devnull, 'w')
+	return subprocess.call(cmd, stdout=fnull, stderr=fnull, shell=True) != 0
+
+def findMainClass(srcDir):
+	for root, dirs, files in os.walk(srcDir):
+		for d in dirs:
+			mainClass = findMainClass(os.path.join(root, d))
+			if len(mainClass) > 0:
+				return d + os.sep + mainClass
+		for f in files:
+			if checkForMain(os.path.join(root, f)):
+				return f.replace(".java", "");
+	return ""
+			
+
+def checkForMain(fullFile):
+	f = open(fullFile, 'r')
+	for line in f:
+		if "public static void main" in line:
+			f.close()
+			return True
+	f.close()
+	return False
 
 def compileFiles(srcD, dstD):
 	files = os.listdir(srcD)
