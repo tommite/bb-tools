@@ -38,16 +38,18 @@ SRCDIR = 'src'
 nextUnknownIndex = 1
 
 def usage():
-	print """usage: extractor.py -z <zipFile> -o <targetDir> -g <groupsFile>
+	print """usage: extractor.py [-u] -z <zipFile> -o <targetDir> -g <groupsFile>
 	<zipFile> is the source zipfile to extract
 	<targetDir> is the target destination for the groups (must not exist)
 	<groupsFile> is the file that defines the groups
 
+	-u unpack only; do not compile
 	-z zipfile to extract
 	-o target location
 	-g group text file, having format: STUDENT_ID,GROUP_ID
 
 	long options also work:
+	--unpack-only
 	--zipfile=<zipFile>
 	--outdir=<targetDir>
 	--groups=<groupsFile>"""
@@ -84,8 +86,8 @@ def readGroups(groupFile):
 	return {'byGroup' : userDict, 'byUser' : groupDict}
 
 def main():
-	shortargs = 'hz:o:g:'
-	longargs = ['help', 'zipfile=', 'outdir=', 'groups=']
+	shortargs = 'uhz:o:g:'
+	longargs = ['unpack-only', 'help', 'zipfile=', 'outdir=', 'groups=']
 	try:
 		opts, args = getopt.getopt(sys.argv[1:], shortargs, longargs)
 	except getopt.GetoptError:
@@ -95,6 +97,7 @@ def main():
 	zipsource = ""
 	resultdest = ""
 	groupFile = ""
+	unpackOnly = False
 	for o, a in opts:
 		if o in ("-z", "--zipfile"):
 			zipsource = a
@@ -105,6 +108,8 @@ def main():
 		elif o in ("-h", "--help"):
 			usage()
 			sys.exit()
+		elif o in ("-u", "--unpack-only"):
+			unpackOnly = True
 
 	if zipsource == "" or resultdest == "" or resultdest == "":
 		usage()
@@ -123,7 +128,7 @@ def main():
 
 	print "ID\tGroup\tStatus"
 	for fname in os.listdir(TEMP_FOLDER):
-		processSubmission(fname, resultdest, gDicts)
+		processSubmission(fname, resultdest, gDicts, unpackOnly)
 
 	shutil.rmtree(TEMP_FOLDER)
 
@@ -136,7 +141,7 @@ def addStudentToUnknownGroup(student, gDict):
 	gDict['byGroup'][UNKNOWN].append(student)
 	
 
-def processSubmission(srcFile, destDir, gDicts):
+def processSubmission(srcFile, destDir, gDicts, unpackOnly):
 	studId = getStudentID(srcFile)
 	group = UNKNOWN # default group is unknown
 	if (studId in gDicts['byUser'].keys()):
@@ -158,15 +163,16 @@ def processSubmission(srcFile, destDir, gDicts):
 		status = "OK"
 		if fnew.endswith('zip'):
 			extractResources(fnew, srcD)
-			if not compileFiles(srcD, dstD):
-				status = "Compilation error"
-			else:
-				mainClass = findMainClass(srcD)
-				if len(mainClass) == 0:
-					status = "No main()"
+			if not unpackOnly:
+				if not compileFiles(srcD, dstD):
+					status = "Compilation error"
 				else:
-					if not runMain(dstD, mainClass):
-						status = "Execution error"
+					mainClass = findMainClass(srcD)
+					if len(mainClass) == 0:
+						status = "No main()"
+					else:
+						if not runMain(dstD, mainClass):
+							status = "Execution error"
 		else:
 			status = "Not zip: " +  os.path.splitext(fnew)[1]
 		print "{}\t{}\t{}".format(studId,group,status)
