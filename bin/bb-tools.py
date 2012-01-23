@@ -28,12 +28,14 @@ import sys
 import getopt
 import zipfile
 import subprocess
+from multiprocessing import Process
 
 # constants
 TEMP_FOLDER = './temp-extractor-bb'
 UNKNOWN = 'UNKNOWN'
 BINDIR = 'bin'
 SRCDIR = 'src'
+PROCESS_TIMEOUT = 10 # Max 10s to execute program
 # globals
 nextUnknownIndex = 1
 
@@ -171,8 +173,11 @@ def processSubmission(srcFile, destDir, gDicts, unpackOnly):
 					if len(mainClass) == 0:
 						status = "No main()"
 					else:
-						if not runMain(dstD, mainClass):
-							status = "Execution error"
+						rcode = runMain(dstD, mainClass)
+						if rcode == 2:
+							status = "Execution error: failed"
+						elif rcode == 1:
+							status = "Execution error: infinite loop"
 		else:
 			status = "Not zip: " +  os.path.splitext(fnew)[1]
 		print "{}\t{}\t{}".format(studId,group,status)
@@ -180,8 +185,20 @@ def processSubmission(srcFile, destDir, gDicts, unpackOnly):
 
 def runMain(classpath, mainclass):
 	cmd = "java -classpath " + classpath + " " + mainclass
-	fnull=open(os.path.devnull, 'w')
-	return subprocess.call(cmd, stdout=fnull, stderr=fnull, shell=True) != 0
+	p = Process(target=runExecuteProcess, args=(cmd,))
+	p.start()
+	p.join(PROCESS_TIMEOUT)
+	if p.exitcode == 0:
+		return 0
+	elif p.is_alive():
+		p.terminate()
+		return 1 # infinite loop
+	else:
+		return 2 # failed
+
+def runExecuteProcess(cmd):
+	fnull=open(os.path.devnull, 'w')	
+	return subprocess.call(cmd, stdout=fnull, stderr=fnull, shell=True)
 
 def findMainClass(srcDir):
 	for root, dirs, files in os.walk(srcDir):
