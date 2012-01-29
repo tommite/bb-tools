@@ -174,10 +174,10 @@ def processSubmission(srcFile, destDir, gDicts, unpackOnly):
 						status = "No main()"
 					else:
 						rcode = runMain(dstD, mainClass)
-						if rcode == 2:
-							status = "Execution error: failed"
-						elif rcode == 1:
+						if rcode == 666:
 							status = "Execution error: infinite loop"
+						elif rcode != 0:
+							status = "Execution error: failed (code {})".format(rcode)
 		else:
 			status = "Not zip: " +  os.path.splitext(fnew)[1]
 		print "{}\t{}\t{}".format(studId,group,status)
@@ -192,9 +192,9 @@ def runMain(classpath, mainclass):
 		return 0
 	elif p.is_alive():
 		p.terminate()
-		return 1 # infinite loop
+		return 666 # infinite loop
 	else:
-		return 2 # failed
+		return p.exitcode # failed
 
 def runExecuteProcess(cmd):
 	fnull=open(os.path.devnull, 'w')	
