@@ -166,14 +166,14 @@ def processSubmission(srcFile, destDir, gDicts, unpackOnly):
 		if fnew.endswith('zip'):
 			extractResources(fnew, srcD)
 			if not unpackOnly:
-				if not compileFiles(srcD, dstD):
+				if not compileFiles(srcD, dstD, path):
 					status = "Compilation error"
 				else:
 					mainClass = findMainClass(srcD)
 					if len(mainClass) == 0:
 						status = "No main()"
 					else:
-						rcode = runMain(dstD, mainClass)
+						rcode = runMain(dstD, mainClass, path)
 						if rcode == 666:
 							status = "Execution error: infinite loop"
 						elif rcode != 0:
@@ -183,11 +183,13 @@ def processSubmission(srcFile, destDir, gDicts, unpackOnly):
 		print "{}\t{}\t{}".format(studId,group,status)
 	renameFile(path, srcFile)
 
-def runMain(classpath, mainclass):
+def runMain(classpath, mainclass, logpath):
 	cmd = "java -classpath " + classpath + " " + mainclass
-	p = Process(target=runExecuteProcess, args=(cmd,))
+
+	p = Process(target=runExecuteProcess, args=(cmd,logpath,))
 	p.start()
 	p.join(PROCESS_TIMEOUT)
+	
 	if p.exitcode == 0:
 		return 0
 	elif p.is_alive():
@@ -196,9 +198,11 @@ def runMain(classpath, mainclass):
 	else:
 		return p.exitcode # failed
 
-def runExecuteProcess(cmd):
-	fnull=open(os.path.devnull, 'w')	
-	return subprocess.call(cmd, stdout=fnull, stderr=fnull, shell=True)
+def runExecuteProcess(cmd, logpath):
+	logfile=open(logpath + os.sep + "exec.log", 'w')
+	retval = subprocess.call(cmd, stdout=logfile, stderr=logfile, shell=True)
+	logfile.close()
+	return retval
 
 def findMainClass(srcDir):
 	for root, dirs, files in os.walk(srcDir):
@@ -221,15 +225,17 @@ def checkForMain(fullFile):
 	f.close()
 	return False
 
-def compileFiles(srcD, dstD):
+## path is the path where to put the log of compilation
+def compileFiles(srcD, dstD, path):
 	files = os.listdir(srcD)
 	p = re.compile('\.java$')
 	retval = True
 	for f in [f for f in files if p.search(f)]:
 		fullfile = srcD + os.sep + f
 		cmd = "javac -source 1.6 -target 1.6 -d " + dstD + " -sourcepath " + srcD + " " + fullfile
-		fnull=open(os.path.devnull, 'w')
-		ret = subprocess.call(cmd, stdout=fnull, stderr=fnull, shell=True)
+		logfile=open(path + os.sep + "compile.log", 'w')
+		ret = subprocess.call(cmd, stdout=logfile, stderr=logfile, shell=True)
+		logfile.close()
 		if ret != 0:
 			retval = False
 	return retval
