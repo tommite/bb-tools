@@ -166,8 +166,9 @@ def processSubmission(srcFile, destDir, gDicts, unpackOnly):
 		if fnew.endswith('zip'):
 			extractResources(fnew, srcD)
 			if not unpackOnly:
-				if not compileFiles(srcD, dstD, path):
-					status = "Compilation error"
+				compcode = compileFiles(srcD, dstD, path)
+				if compcode != 0:
+					status = "Compilation error (code {})".format(compcode)
 				else:
 					mainClass = findMainClass(srcD)
 					if len(mainClass) == 0:
@@ -229,15 +230,15 @@ def checkForMain(fullFile):
 def compileFiles(srcD, dstD, path):
 	files = os.listdir(srcD)
 	p = re.compile('\.java$')
-	retval = True
+	retval = 0
 	for f in [f for f in files if p.search(f)]:
 		fullfile = srcD + os.sep + f
-		cmd = "javac -source 1.6 -target 1.6 -d " + dstD + " -sourcepath " + srcD + " " + fullfile
+		cmd = "javac -nowarn -source 1.6 -target 1.6 -d " + dstD + " -sourcepath " + srcD + " " + fullfile
 		logfile=open(path + os.sep + "compile.log", 'w')
-		ret = subprocess.call(cmd, stdout=logfile, stderr=logfile, shell=True)
+		retval = subprocess.call(cmd, stdout=logfile, stderr=logfile, shell=True)
 		logfile.close()
-		if ret != 0:
-			retval = False
+		if retval != 0:
+			return retval
 	return retval
 
 def getStudentID(srcFile):
