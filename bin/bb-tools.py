@@ -29,13 +29,17 @@ import getopt
 import zipfile
 import subprocess
 from multiprocessing import Process
+import fnmatch
 
 # constants
-TEMP_FOLDER = './temp-extractor-bb'
+TEMP_FOLDER = './temp-bb-tools'
 UNKNOWN = 'UNKNOWN'
 BINDIR = 'bin'
 SRCDIR = 'src'
 PROCESS_TIMEOUT = 10 # Max 10s to execute program
+LIBPATH = os.path.dirname(__file__) + os.sep + '..' + os.sep + 'lib' + os.sep
+JUNITLIB = LIBPATH + 'junit-4.10.jar'
+
 # globals
 nextUnknownIndex = 1
 
@@ -71,7 +75,7 @@ def renameFile(path, f):
 	f = path + os.sep + f
 	fnew = path + os.sep + fnew
 	shutil.move(f, fnew)
-			
+
 def readGroups(groupFile):
 	csvReader = csv.reader(open(groupFile), delimiter = ',')
 	groupDict = {}
@@ -141,7 +145,7 @@ def makeGroupFolders(resultDest, groups):
 def addStudentToUnknownGroup(student, gDict):
 	gDict['byUser'][student] = UNKNOWN
 	gDict['byGroup'][UNKNOWN].append(student)
-	
+
 
 def processSubmission(srcFile, destDir, gDicts, unpackOnly):
 	studId = getStudentID(srcFile)
@@ -150,7 +154,7 @@ def processSubmission(srcFile, destDir, gDicts, unpackOnly):
 		group = gDicts['byUser'][studId]
 	else:
 		addStudentToUnknownGroup(studId, gDicts)
-	
+
 	path = destDir + os.sep + group + os.sep + studId
 	srcD = path + os.sep + SRCDIR
 	dstD = path + os.sep + BINDIR
@@ -170,6 +174,7 @@ def processSubmission(srcFile, destDir, gDicts, unpackOnly):
 				if compcode != 0:
 					status = "Compilation error (code {})".format(compcode)
 				else:
+					runTests(dstD, path)
 					mainClass = findMainClass(srcD)
 					if len(mainClass) == 0:
 						status = "No main()"
@@ -184,13 +189,26 @@ def processSubmission(srcFile, destDir, gDicts, unpackOnly):
 		print "{}\t{}\t{}".format(studId,group,status)
 	renameFile(path, srcFile)
 
+def runTests(classpath, logpath):
+	fileList = []
+	for root, subFolders, files in os.walk(classpath):
+		for f in files:
+			classn = os.path.splitext(f)[0]
+			if (fnmatch.fnmatch(classn, "*Test")):
+				fileList.append(classn)
+	tests = " ".join(fileList)
+	cmd = "java -classpath " + classpath + ":" + JUNITLIB + " org.junit.runner.JUnitCore " + tests
+	p = Process(target=runExecuteProcess, args=(cmd,logpath,"tests.log"))
+	p.start()
+	p.join(PROCESS_TIMEOUT)
+
 def runMain(classpath, mainclass, logpath):
 	cmd = "java -classpath " + classpath + " " + mainclass
 
-	p = Process(target=runExecuteProcess, args=(cmd,logpath,))
+	p = Process(target=runExecuteProcess, args=(cmd,logpath,"exec.log"))
 	p.start()
 	p.join(PROCESS_TIMEOUT)
-	
+
 	if p.exitcode == 0:
 		return 0
 	elif p.is_alive():
@@ -199,8 +217,8 @@ def runMain(classpath, mainclass, logpath):
 	else:
 		return p.exitcode # failed
 
-def runExecuteProcess(cmd, logpath):
-	logfile=open(logpath + os.sep + "exec.log", 'w')
+def runExecuteProcess(cmd, logpath, logfile):
+	logfile=open(logpath + os.sep + logfile, 'w')
 	retval = subprocess.call(cmd, stdout=logfile, stderr=logfile, shell=True)
 	logfile.close()
 	return retval
@@ -215,7 +233,7 @@ def findMainClass(srcDir):
 			if checkForMain(os.path.join(root, f)):
 				return f.replace(".java", "");
 	return ""
-			
+
 
 def checkForMain(fullFile):
 	f = open(fullFile, 'r')
@@ -231,9 +249,10 @@ def compileFiles(srcD, dstD, path):
 	files = os.listdir(srcD)
 	p = re.compile('\.java$')
 	retval = 0
+	cpath = "-classpath "+JUNITLIB
 	for f in [f for f in files if p.search(f)]:
 		fullfile = srcD + os.sep + f
-		cmd = "javac -nowarn -source 1.6 -target 1.6 -d " + dstD + " -sourcepath " + srcD + " " + fullfile
+		cmd = "javac -nowarn -source 1.6 -target 1.6 " + cpath + " -d " + dstD + " -sourcepath " + srcD + " " + fullfile
 		logfile=open(path + os.sep + "compile.log", 'w')
 		retval = subprocess.call(cmd, stdout=logfile, stderr=logfile, shell=True)
 		logfile.close()
@@ -253,5 +272,5 @@ def getStudentID(srcFile):
 		uname = hits[0][:6]
 	return uname
 
-	
+
 if __name__ == '__main__': main()
