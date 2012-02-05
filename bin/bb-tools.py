@@ -36,7 +36,7 @@ TEMP_FOLDER = './temp-bb-tools'
 UNKNOWN = 'UNKNOWN'
 BINDIR = 'bin'
 SRCDIR = 'src'
-PROCESS_TIMEOUT = 10 # Max 10s to execute program
+PROCESS_TIMEOUT = 30 # Max 30s to execute program
 LIBPATH = os.path.dirname(__file__) + os.sep + '..' + os.sep + 'lib' + os.sep
 JUNITLIB = LIBPATH + 'junit-4.10.jar'
 
