@@ -44,7 +44,7 @@ JUNITLIB = LIBPATH + 'junit-4.10.jar'
 nextUnknownIndex = 1
 
 def usage():
-	print """usage: bb-tools.py [-u] -z <zipFile> -o <targetDir> -g <groupsFile>
+	print """usage: bb-tools.py [-u] [-g <groupsFile>] -z <zipFile> -o <targetDir>
 	<zipFile> is the source zipfile to extract
 	<targetDir> is the target destination for the groups (must not exist)
 	<groupsFile> is the file that defines the groups
@@ -103,6 +103,7 @@ def main():
 	zipsource = ""
 	resultdest = ""
 	groupFile = ""
+	gDicts = None
 	unpackOnly = False
 	for o, a in opts:
 		if o in ("-z", "--zipfile"):
@@ -125,7 +126,11 @@ def main():
 		print "Error: target directory {} exists (remove and re-try)".format(resultdest)
 		sys.exit(1)
 
-	gDicts = readGroups(groupFile)
+	if (groupFile != ""):
+		gDicts = readGroups(groupFile)
+	else:
+		gDicts = {'byUser' : {}, 'byGroup' : { UNKNOWN : [] } }
+	print(gDicts)
 	extractResources(zipsource, TEMP_FOLDER)
 	os.makedirs(resultdest)
 	makeGroupFolders(resultdest, gDicts['byGroup'].keys())
