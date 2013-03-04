@@ -3,7 +3,7 @@
 ###
 #   This file is part of bb-tools.
 #
-#   (c) Tommi Tervonen and Damir Vandic, 2011-12.
+#   (c) Tommi Tervonen and Damir Vandic, 2011-13.
 #
 #   bb-tools is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
