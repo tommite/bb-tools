@@ -44,7 +44,7 @@ JUNITLIB = LIBPATH + 'junit-4.10.jar'
 nextUnknownIndex = 1
 
 def usage():
-	print """usage: extractor.py [-u] -z <zipFile> -o <targetDir> -g <groupsFile>
+	print """usage: bb-tools.py [-u] -z <zipFile> -o <targetDir> -g <groupsFile>
 	<zipFile> is the source zipfile to extract
 	<targetDir> is the target destination for the groups (must not exist)
 	<groupsFile> is the file that defines the groups
