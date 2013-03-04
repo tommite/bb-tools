@@ -64,7 +64,7 @@ def usage():
 def extractResources(zipsource, dir):
 	if not dir.endswith(':') and not os.path.exists(dir):
 		os.mkdir(dir)
-	zf = zipfile.ZipFile(zipsource)
+	zf = zipfile.ZipFile(zipsource, 'r')
 	zf.extractall(path = dir)
 
 def renameFile(path, f):
@@ -130,16 +130,20 @@ def main():
 		gDicts = readGroups(groupFile)
 	else:
 		gDicts = {'byUser' : {}, 'byGroup' : { UNKNOWN : [] } }
-	print(gDicts)
-	extractResources(zipsource, TEMP_FOLDER)
-	os.makedirs(resultdest)
-	makeGroupFolders(resultdest, gDicts['byGroup'].keys())
+	try:
+		extractResources(zipsource, TEMP_FOLDER)
+		os.makedirs(resultdest)
+		makeGroupFolders(resultdest, gDicts['byGroup'].keys())
 
-	dirList = os.listdir(TEMP_FOLDER) ## list files in the temp folder
+		dirList = os.listdir(TEMP_FOLDER) ## list files in the temp folder
 
-	print "ID\tGroup\tStatus"
-	for fname in os.listdir(TEMP_FOLDER):
-		processSubmission(fname, resultdest, gDicts, unpackOnly)
+		print "ID\tGroup\tStatus"
+		for fname in os.listdir(TEMP_FOLDER):
+			processSubmission(fname, resultdest, gDicts, unpackOnly)
+	except IOError:
+		print "Error: cannot find the given zipfile"
+	except zipfile.BadZipfile:
+		print "Error: the main submission zip is not a zip file"
 
 	shutil.rmtree(TEMP_FOLDER)
 
@@ -173,22 +177,25 @@ def processSubmission(srcFile, destDir, gDicts, unpackOnly):
 	if not fnew.endswith('txt'):
 		status = "OK"
 		if fnew.endswith('zip'):
-			extractResources(fnew, srcD)
-			if not unpackOnly:
-				compcode = compileFiles(srcD, dstD, path)
-				if compcode != 0:
-					status = "Compilation error (code {})".format(compcode)
-				else:
-					runTests(dstD, path)
-					mainClass = findMainClass(srcD)
-					if len(mainClass) == 0:
-						status = "No main()"
+			try:
+				extractResources(fnew, srcD)
+				if not unpackOnly:
+					compcode = compileFiles(srcD, dstD, path)
+					if compcode != 0:
+						status = "Compilation error (code {})".format(compcode)
 					else:
-						rcode = runMain(dstD, mainClass, path)
-						if rcode == 666:
-							status = "Execution error: infinite loop"
-						elif rcode != 0:
-							status = "Execution error: failed (code {})".format(rcode)
+						runTests(dstD, path)
+						mainClass = findMainClass(srcD)
+						if len(mainClass) == 0:
+							status = "No main()"
+						else:
+							rcode = runMain(dstD, mainClass, path)
+							if rcode == 666:
+								status = "Execution error: infinite loop"
+							elif rcode != 0:
+								status = "Execution error: failed (code {})".format(rcode)
+			except zipfile.BadZipfile:
+				status = "Unable to unpack submission zip".format(fnew)
 		else:
 			status = "Not zip: " +  os.path.splitext(fnew)[1]
 		print "{}\t{}\t{}".format(studId,group,status)
